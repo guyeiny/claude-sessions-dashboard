@@ -27,6 +27,8 @@ TAIL_BYTES = 3_000_000
 ORCA_BIN = "/Applications/Orca.app/Contents/Resources/bin/orca"
 ATTACH_TABS = HERE / "attach-tabs.json"  # jobId -> Orca tab opened by Attach
 ORCA_HOOKS = HOME / "Library" / "Application Support" / "orca" / "agent-hooks" / "last-status.json"
+DESKTOP_DIR = HOME / "Library" / "Application Support" / "Claude"  # Claude Desktop's own state (read-only)
+SCRATCH = "/Library/Application Support/Claude/scratch-workspaces/"  # Desktop "No folder" sessions
 
 
 def ps_info(pid):
@@ -175,11 +177,60 @@ def summarize(path, cwd=""):
 
 
 def project_of(cwd, entrypoint):
-    if "/Library/Application Support/Claude/scratch-workspaces/" in cwd:
+    if SCRATCH in cwd:
         return "Claude Desktop · scratch"
     home = str(HOME)
     rel = cwd[len(home):].lstrip("/") if cwd.startswith(home) else cwd
     return "~/" + rel if rel else "~"
+
+
+_desktop_cache = {}
+
+
+def desktop_meta():
+    """Claude Desktop sidebar groups and environments: ({"code:local_…": group name}, {env id: name}).
+    Read from Desktop's config files, cached by mtime; empty if the format isn't what we expect."""
+    files = [DESKTOP_DIR / "claude_desktop_config.json", DESKTOP_DIR / "ccd-session-presets.json"]
+    key = tuple(f.stat().st_mtime if f.exists() else 0 for f in files)
+    if _desktop_cache.get("key") == key:
+        return _desktop_cache["val"]
+    sections, envs = {}, {"builtin_local": "Local"}
+    try:
+        prefs = json.loads(files[0].read_text())["preferences"]["epitaxyPrefs"]
+        for scope in prefs.get("dframe-group-scopes", {}).values():
+            names = {g["id"]: g["name"] for g in scope.get("groups", [])}
+            for sid, gid in scope.get("assignments", {}).items():
+                if gid in names:
+                    sections[sid] = names[gid]
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    try:
+        for acct in json.loads(files[1].read_text())["byAccount"].values():
+            for pr in acct.get("presets", []):
+                envs[pr["id"]] = pr["name"]
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    _desktop_cache.update(key=key, val=(sections, envs))
+    return sections, envs
+
+
+def location_of(cwd, host_id):
+    """Where a session lives: its working folder; for a Desktop "No folder" session, its sidebar
+    section; failing that, its Desktop environment (Local by default)."""
+    if cwd and SCRATCH not in cwd:
+        return {"kind": "folder", "label": Path(cwd).name or cwd, "title": project_of(cwd, None)}
+    sections, envs = desktop_meta()
+    if host_id and f"code:{host_id}" in sections:
+        return {"kind": "section", "label": sections[f"code:{host_id}"], "title": "Claude Desktop sidebar section"}
+    env = "Local"
+    if host_id and re.fullmatch(r"local_[0-9a-f-]+", host_id):
+        for f in (DESKTOP_DIR / "claude-code-sessions").glob(f"*/*/{host_id}.json"):
+            try:
+                env = envs.get(json.loads(f.read_text()).get("envScopeId"), env)
+            except (OSError, ValueError, AttributeError):
+                pass
+            break
+    return {"kind": "env", "label": env, "title": "Claude Desktop environment (no folder or section)"}
 
 
 DEMO = "--demo" in sys.argv  # serve made-up sessions from demo/ (for screenshots); actions do nothing
@@ -192,6 +243,8 @@ def demo_sessions():
         s["startedAt"] = now - s.pop("startedAgoMin") * 60_000
         s["updatedAt"] = now - s.pop("activeAgoMin") * 60_000
         s["lastPrompt"] = s["asks"][0] if s["asks"] else None
+        if "location" not in s:  # scratch demo entries carry their own made-up section/env
+            s["location"] = {"kind": "folder", "label": s["cwd"].rstrip("/").rsplit("/", 1)[-1], "title": s["cwd"]}
     return sessions
 
 
@@ -216,6 +269,7 @@ def load_sessions():
             "title": summ["title"],
             "cwd": s.get("cwd", ""),
             "project": project_of(s.get("cwd", ""), s.get("entrypoint")),
+            "location": location_of(s.get("cwd", ""), s.get("hostSessionId")),
             "kind": s.get("kind"),
             "entrypoint": s.get("entrypoint"),
             "status": s.get("status") or "unknown",

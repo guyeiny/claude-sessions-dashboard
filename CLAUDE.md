@@ -19,3 +19,7 @@
 
 - Age groups (`AGE` in `index.html`) bucket by time since `updatedAt` (else `startedAt`): 0–12 h, 12–24 h, 1–3 days, 3+ days. Ended sessions are bucketed by age too, not split out.
 - Switching to Age always starts oldest-first; clicking Age while active flips the order (`csd:ageOldestFirst`).
+
+## Location chip
+
+- Each card shows one location chip (`location` from `location_of()`): the working folder name; for a Desktop "No folder" (scratch) session, its sidebar section; if it has no section either, its Desktop environment (Local by default). Folder sessions don't show their section — Guy chose this fallback order.

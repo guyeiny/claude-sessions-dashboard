@@ -261,6 +261,9 @@ let ageOldestFirst = store.get("ageOldestFirst", true);  // Age grouping order; 
 let collapsed = new Set(store.get("collapsed", []));
 
 const ICON = {
+  folder: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  section: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h6"/></svg>',
+  env: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
   chev: '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
@@ -310,6 +313,8 @@ function chips(s, st) {
   const label = st === "busy" ? (s.status === "busy" ? "Working" : s.status) : st === "stale" ? `Idle ${idleDays}d` : STATUS[st].label;
   const out = [`<span class="chip status">${esc(label)}</span>`];
   out.push(`<span class="chip ${s.entrypoint === "claude-desktop" ? "info" : "outline"}">${appOf(s)}</span>`);
+  const loc = s.location;  // working folder, else Desktop sidebar section, else Desktop environment
+  if (loc) out.push(`<span class="chip outline" dir="auto" title="${esc(loc.title || loc.label)}">${ICON[loc.kind] || ""}<span class="chip-text">${esc(loc.label)}</span></span>`);
   if (s.headless) out.push(`<span class="chip outline" title="Runs inside the Claude daemon with no terminal window of its own.">${s.attachTab ? "attached in Orca" : "headless"}</span>`);
   else if (s.alive && s.tty) out.push(`<span class="chip outline mono">${esc(s.tty)}</span>`);
   const branch = s.branch && !["HEAD", "master", "main"].includes(s.branch) ? s.branch : null;
@@ -402,7 +407,7 @@ function groupsFor(list) {
 
 function render() {
   const q = document.getElementById("q").value.trim().toLowerCase();
-  const list = sessions.filter(s => !q || [s.name, s.title, s.project, s.firstPrompt, s.lastReply, s.branch,
+  const list = sessions.filter(s => !q || [s.name, s.title, s.project, s.location?.label, s.firstPrompt, s.lastReply, s.branch,
     ...(s.asks || []), ...(s.files || []), ...(s.tickets || []), ...(s.prs || [])]
     .some(v => (v || "").toLowerCase().includes(q)));
   // Keep what the viewer expanded across re-renders.
