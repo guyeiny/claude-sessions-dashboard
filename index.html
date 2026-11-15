@@ -233,6 +233,7 @@
     <button data-mode="project">Project</button>
     <button data-mode="status">Status</button>
     <button data-mode="app">App</button>
+    <button data-mode="age" title="Click again to reverse the order">Age <span id="ageDir"></span></button>
     <button data-mode="none">None</button>
   </div>
   <button class="icon-btn" id="toggleAll" title="Collapse all groups"></button>
@@ -255,7 +256,8 @@ const store = {
   set(k, v) { try { localStorage.setItem("csd:" + k, JSON.stringify(v)); } catch {} },
 };
 const params = new URLSearchParams(location.search);
-let mode = params.get("group") || store.get("mode", "project");  // ?group=project|status|app|none
+let mode = params.get("group") || store.get("mode", "project");  // ?group=project|status|app|age|none
+let ageOldestFirst = store.get("ageOldestFirst", true);  // Age grouping order; clicking Age again flips it
 let collapsed = new Set(store.get("collapsed", []));
 
 const ICON = {
@@ -380,12 +382,19 @@ function card(s, i) {
 }
 
 /* ---------- Groups ---------- */
+// Age = time since last activity (updatedAt, else startedAt), youngest bucket first.
+const AGE = [["0–12 hours", 12], ["12–24 hours", 24], ["1–3 days", 72], ["3+ days", Infinity]];
+const ageOf = s => AGE.find(([, h]) => (Date.now() - (s.updatedAt || s.startedAt || 0)) / 36e5 < h)[0];
+const ageRank = k => AGE.findIndex(([label]) => label === k);
+
 function groupsFor(list) {
-  const key = { project: s => s.project, status: s => STATUS[statusOf(s)].label, app: appOf, none: () => "All sessions" }[mode];
+  const key = { project: s => s.project, status: s => STATUS[statusOf(s)].label, app: appOf, age: ageOf, none: () => "All sessions" }[mode];
   const groups = new Map();
   for (const s of list) { const k = key(s); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); }
   const latest = items => Math.max(...items.map(s => s.updatedAt || 0));
-  const order = mode === "status"
+  const order = mode === "age"
+    ? (a, b) => (ageRank(a[0]) - ageRank(b[0])) * (ageOldestFirst ? -1 : 1)
+    : mode === "status"
     ? (a, b) => Object.values(STATUS).find(x => x.label === a[0]).order - Object.values(STATUS).find(x => x.label === b[0]).order
     : (a, b) => latest(b[1]) - latest(a[1]);
   return [...groups].sort(order).map(([k, items]) => [k, items.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))]);
@@ -446,6 +455,7 @@ function setCollapsed(id, on) {
 function syncSeg() {
   const seg = document.getElementById("groupBy");
   for (const b of seg.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
+  document.getElementById("ageDir").textContent = mode === "age" ? (ageOldestFirst ? "↓" : "↑") : "";
   const active = seg.querySelector(`button[data-mode="${mode}"]`);
   const thumb = seg.querySelector(".thumb");
   thumb.style.left = active.offsetLeft + "px";
@@ -506,7 +516,11 @@ document.addEventListener("keydown", e => {
 });
 document.getElementById("groupBy").addEventListener("click", e => {
   const b = e.target.closest("button[data-mode]");
-  if (!b || b.dataset.mode === mode) return;
+  if (!b) return;
+  if (b.dataset.mode === "age") {  // first click: oldest first; each further click reverses
+    ageOldestFirst = mode === "age" ? !ageOldestFirst : true;
+    store.set("ageOldestFirst", ageOldestFirst);
+  } else if (b.dataset.mode === mode) return;
   mode = b.dataset.mode; store.set("mode", mode);
   syncSeg(); seen.clear(); render();
 });

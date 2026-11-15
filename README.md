@@ -21,7 +21,7 @@ Each session is a card that reminds you what it was about. The card shows the fi
 
 ## Features
 
-- **Cards grouped by project**, status (working / idle / stale / ended), or app (CLI / Desktop / background). Groups collapse and expand, and your choice is remembered.
+- **Cards grouped by project**, status (working / idle / stale / ended), app (CLI / Desktop / background), or age since last activity (0–12 h / 12–24 h / 1–3 days / 3+ days; oldest first, click Age again to reverse). Groups collapse and expand, and your choice is remembered.
 - **Context at a glance:** first ask, latest ask, Claude's last reply, git branch, Jira tickets, PRs, plus earlier asks, edited files and tool usage behind an expandable row.
 - **One-click Open** that goes to the exact Orca tab or Claude Desktop chat, attaches to headless background jobs, or resumes ended sessions (see below).
 - **Close** with an in-card confirmation.
@@ -37,7 +37,7 @@ PORT=9000 python3 server.py  # different port
 python3 server.py --demo     # made-up sessions from demo/sessions.json; actions do nothing
 ```
 
-Add `?group=project|status|app|none` to the URL to choose the grouping.
+Add `?group=project|status|app|age|none` to the URL to choose the grouping.
 
 Python 3 standard library only, macOS only.
 
@@ -69,3 +69,11 @@ Python 3 standard library only, macOS only.
 - `demo/sessions.json`: made-up sessions for `--demo` and the screenshots
 - `docs/`: README screenshots
 - `attach-tabs.json`: local record of the Orca tabs Attach has opened (git-ignored)
+
+## Mac app
+
+```sh
+./mac-app/build.sh   # builds build/Claude Sessions Dashboard.app
+```
+
+The app bundles the server, starts it when opened, and shows the dashboard in its own window. Drag it to `/Applications` to keep it. Rebuild after changing `server.py` or `index.html`.
