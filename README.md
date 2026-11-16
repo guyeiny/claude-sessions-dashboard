@@ -26,6 +26,7 @@ Each session is a card that reminds you what it was about. The card shows the fi
 - **Context at a glance:** first ask, latest ask, Claude's last reply, git branch, Jira tickets, PRs, plus earlier asks, edited files and tool usage behind an expandable row.
 - **One-click Open** that goes to the exact Orca tab or Claude Desktop chat, attaches to headless background jobs, or resumes ended sessions (see below).
 - **Close** with an in-card confirmation.
+- **Compact mode** toggle in the toolbar hides the asks and the asks/tools/files row, leaving the title, chips and Claude's last reply.
 - **Search** across asks, replies, files, branches, tickets and PRs. Press `/` to focus it.
 - **Live updates** every 10 seconds, with animations only for sessions that are new.
 

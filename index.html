@@ -44,7 +44,7 @@
   header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 82%, transparent);
     backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-bottom: 1px solid var(--border); }
-  .bar { max-width: 1280px; margin: 0 auto; padding: 14px 20px; display: flex; gap: 14px 18px; align-items: center; flex-wrap: wrap; }
+  .bar { max-width: 1280px; margin: 0 auto; padding: 14px 20px; display: flex; gap: 14px 12px; align-items: center; flex-wrap: wrap; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .logo { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: var(--on-accent);
     background: linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #7a1e00)); box-shadow: var(--shadow-sm); }
@@ -57,7 +57,7 @@
   .search { position: relative; display: flex; align-items: center; }
   .search svg { position: absolute; left: 10px; color: var(--faint); pointer-events: none; }
   .search input { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
-    padding: 7px 10px 7px 32px; width: 240px; font: inherit; font-size: 13px; outline: none;
+    padding: 7px 10px 7px 32px; width: 170px; font: inherit; font-size: 13px; outline: none;
     transition: border-color .2s, box-shadow .2s, width .3s var(--ease); }
   .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); width: 280px; }
   .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; position: relative; }
@@ -71,6 +71,17 @@
     border: 1px solid var(--border); background: var(--surface); color: var(--muted); transition: color .15s, background .15s, transform .15s; }
   .icon-btn:hover { color: var(--text); background: var(--surface-2); }
   .icon-btn:active { transform: scale(.94); }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px 0 8px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg-2); color: var(--muted); font-size: 12.5px; font-family: inherit; }
+  .toggle:hover { color: var(--text); }
+  .toggle .knob { width: 26px; height: 16px; border-radius: 99px; background: var(--border); position: relative; transition: background .2s var(--ease); }
+  .toggle .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s var(--ease); }
+  .toggle[aria-pressed="true"] { color: var(--text); }
+  .toggle[aria-pressed="true"] .knob { background: var(--accent); }
+  .toggle[aria-pressed="true"] .knob::after { transform: translateX(10px); }
+  /* Compact mode: cards keep title, chips and Claude's last reply; asks and the asks/tools/files row are hidden. */
+  body.compact .card .ask-block, body.compact .card details { display: none; }
   .spin svg { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -236,6 +247,7 @@
     <button data-mode="age" title="Click again to reverse the order">Age <span id="ageDir"></span></button>
     <button data-mode="none">None</button>
   </div>
+  <button class="toggle" id="compact" aria-pressed="false" title="Hide asks, tools and files on cards"><span class="knob"></span>Compact</button>
   <button class="icon-btn" id="toggleAll" title="Collapse all groups"></button>
   <button class="icon-btn" id="refresh" title="Refresh">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>
@@ -259,6 +271,7 @@ const params = new URLSearchParams(location.search);
 let mode = params.get("group") || store.get("mode", "project");  // ?group=project|status|app|age|none
 let ageOldestFirst = store.get("ageOldestFirst", true);  // Age grouping order; clicking Age again flips it
 let collapsed = new Set(store.get("collapsed", []));
+let compact = store.get("compact", false);  // compact cards: no asks, no asks/tools/files row
 
 const ICON = {
   folder: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
@@ -333,8 +346,8 @@ function context(s) {
   const latest = asks[0];
   const first = s.firstPrompt && s.firstPrompt !== latest ? s.firstPrompt : null;
   let html = "";
-  if (first) html += `<div class="block"><span class="label">Started with</span><p class="ask clamp" dir="auto">${esc(first)}</p></div>`;
-  if (latest) html += `<div class="block"><span class="label">Latest ask</span><p class="ask clamp" dir="auto">${esc(latest)}</p></div>`;
+  if (first) html += `<div class="block ask-block"><span class="label">Started with</span><p class="ask clamp" dir="auto">${esc(first)}</p></div>`;
+  if (latest) html += `<div class="block ask-block"><span class="label">Latest ask</span><p class="ask clamp" dir="auto">${esc(latest)}</p></div>`;
   if (s.lastReply) html += `<div class="block"><span class="label">Claude's last reply</span>
     <div class="reply" title="Click to expand"><span class="rtext clamp" dir="auto">${esc(s.lastReply)}</span></div></div>`;
   if (!first && !latest && !s.lastReply) html += `<p class="subtitle">No messages yet.</p>`;
@@ -518,6 +531,14 @@ document.addEventListener("keydown", e => {
     document.querySelectorAll(".card.confirming").forEach(c => c.classList.remove("confirming"));
   }
   if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); document.getElementById("q").focus(); }
+});
+function syncCompact() {
+  document.body.classList.toggle("compact", compact);
+  document.getElementById("compact").setAttribute("aria-pressed", String(compact));
+}
+syncCompact();
+document.getElementById("compact").addEventListener("click", () => {
+  compact = !compact; store.set("compact", compact); syncCompact();
 });
 document.getElementById("groupBy").addEventListener("click", e => {
   const b = e.target.closest("button[data-mode]");
