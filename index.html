@@ -499,7 +499,11 @@ async function load(force) {
 /* ---------- Events ---------- */
 document.getElementById("root").addEventListener("click", async e => {
   const head = e.target.closest(".group-head");
-  if (head) { setCollapsed(head.dataset.group, !collapsed.has(head.dataset.group)); return syncToggleAll(); }
+  if (head) {  // Alt-click: give every group the state this one is switching to
+    const on = !collapsed.has(head.dataset.group);
+    for (const id of e.altKey ? groupIds() : [head.dataset.group]) setCollapsed(id, on);
+    return syncToggleAll();
+  }
   const reply = e.target.closest(".reply");
   if (reply) return reply.querySelector(".rtext").classList.toggle("clamp");
   const btn = e.target.closest("button[data-act]");

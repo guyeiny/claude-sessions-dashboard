@@ -21,7 +21,7 @@ Each session is a card that reminds you what it was about. The card shows the fi
 
 ## Features
 
-- **Cards grouped by project**, status (working / idle / stale / ended), app (CLI / Desktop / background), or age since last activity (0–12 h / 12–24 h / 1–3 days / 3+ days; oldest first, click Age again to reverse). Groups collapse and expand, and your choice is remembered.
+- **Cards grouped by project**, status (working / idle / stale / ended), app (CLI / Desktop / background), or age since last activity (0–12 h / 12–24 h / 1–3 days / 3+ days; oldest first, click Age again to reverse). Groups collapse and expand (Alt-click a group to collapse or expand them all), and your choice is remembered.
 - **Where it lives:** each card shows the session's working folder; Desktop "No folder" chats show their sidebar section, or their environment if they have none.
 - **Context at a glance:** first ask, latest ask, Claude's last reply, git branch, Jira tickets, PRs, plus earlier asks, edited files and tool usage behind an expandable row.
 - **One-click Open** that goes to the exact Orca tab or Claude Desktop chat, attaches to headless background jobs, or resumes ended sessions (see below).

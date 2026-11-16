@@ -28,3 +28,7 @@
 
 - Toolbar toggle `#compact` (saved as `csd:compact`) adds `body.compact`, which hides `.ask-block` (Started with / Latest ask) and the card's `<details>` (asks/tools/files). Pure CSS, no re-render.
 - Adding it overflowed the 1280px toolbar, so the idle search box is 170px (widens to 280px on focus) and the bar gap is 12px.
+
+## Groups
+
+- Alt-clicking a group header applies that group's new collapsed/expanded state to every group (any grouping mode).
